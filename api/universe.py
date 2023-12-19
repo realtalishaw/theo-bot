@@ -1,60 +1,102 @@
-import requests
+# api/universe.py
 
-# Base URL for the Universe API
-UNIVERSE_API_URL = "https://your-api-endpoint.com/universe"
+from utils.api_call import api_call
+from utils.redis_cache import get_from_cache, set_in_cache, delete_from_cache
 
-def create_universe_entity(entity_data):
-    """
-    Creates a new universe entity (planet, moon, or satellite).
-    
-    :param entity_data: Information about the entity to create.
-    :return: The response from the API.
-    """
-    # Implement API call to create a new universe entity
+# Satellite Functions
+def create_satellite(satellite_data):
+    response = api_call("satellites", method='POST', data=satellite_data)
+    return response
 
-def get_universe_entity(entity_id):
-    """
-    Retrieves details of a universe entity.
-    
-    :param entity_id: ID of the entity to retrieve.
-    :return: The formatted HTML details of the entity.
-    """
-    # Implement API call to get details of a universe entity
-    # ...
+def get_satellite(satellite_id):
+    cache_key = f"satellite:{satellite_id}"
+    cached_data = get_from_cache(cache_key)
+    if cached_data:
+        return cached_data
 
-def update_universe_entity(entity_id, entity_data):
-    """
-    Updates an existing universe entity.
-    
-    :param entity_id: ID of the entity to update.
-    :param entity_data: New data for updating the entity.
-    :return: The response from the API.
-    """
-    # Implement API call to update a universe entity
-    # ...
+    satellite_data = api_call(f"satellites/{satellite_id}", method='GET')
+    if satellite_data:
+        set_in_cache(cache_key, satellite_data)
+    return satellite_data
 
-def delete_universe_entity(entity_id):
-    """
-    Deletes a universe entity.
-    
-    :param entity_id: ID of the entity to delete.
-    :return: The response from the API.
-    """
-    # Implement API call to delete a universe entity
-    # ...
+def update_satellite(satellite_id, satellite_data):
+    cache_key = f"satellite:{satellite_id}"
+    response = api_call(f"satellites/{satellite_id}", method='PUT', data=satellite_data)
+    if response:
+        set_in_cache(cache_key, response)
+    return response
 
-def format_universe_response_as_html(response_data):
-    """
-    Formats a universe entity's information as HTML for presentation.
-    
-    :param response_data: The API response data containing entity details.
-    :return: A string of HTML representing the entity.
-    """
-    # This is where you would convert the response data into a user-friendly HTML format.
-    # For example:
-    html_representation = f"<div>"
-    for key, value in response_data.items():
-        html_representation += f"<p><strong>{key.capitalize()}:</strong> {value}</p>"
-    html_representation += "</div>"
-    
-    return html_representation
+def delete_satellite(satellite_id):
+    cache_key = f"satellite:{satellite_id}"
+    response = api_call(f"satellites/{satellite_id}", method='DELETE')
+    if response:
+        delete_from_cache(cache_key)
+    return response
+
+# Moon Functions
+def get_all_moons():
+    moons = api_call("moons", method='GET')
+    return moons
+
+def get_moon(moon_id):
+    cache_key = f"moon:{moon_id}"
+    cached_data = get_from_cache(cache_key)
+    if cached_data:
+        return cached_data
+
+    moon_data = api_call(f"moons/{moon_id}", method='GET')
+    if moon_data:
+        set_in_cache(cache_key, moon_data)
+    return moon_data
+
+def update_moon(moon_id, moon_data):
+    cache_key = f"moon:{moon_id}"
+    response = api_call(f"moons/{moon_id}", method='PUT', data=moon_data)
+    if response:
+        set_in_cache(cache_key, response)
+    return response
+
+def delete_moon(moon_id):
+    cache_key = f"moon:{moon_id}"
+    response = api_call(f"moons/{moon_id}", method='DELETE')
+    if response:
+        delete_from_cache(cache_key)
+    return response
+
+def get_moons_by_planet(planet_id):
+    moons = api_call(f"moons/byPlanet/{planet_id}", method='GET')
+    return moons
+
+# Planet Functions
+def get_all_planets():
+    planets = api_call("planets", method='GET')
+    return planets
+
+def create_planet(planet_data):
+    response = api_call("planets", method='POST', data=planet_data)
+    return response
+
+def get_planet(planet_id):
+    cache_key = f"planet:{planet_id}"
+    cached_data = get_from_cache(cache_key)
+    if cached_data:
+        return cached_data
+
+    planet_data = api_call(f"planets/{planet_id}", method='GET')
+    if planet_data:
+        set_in_cache(cache_key, planet_data)
+    return planet_data
+
+def update_planet(planet_id, planet_data):
+    cache_key = f"planet:{planet_id}"
+    response = api_call(f"planets/{planet_id}", method='PUT', data=planet_data)
+    if response:
+        set_in_cache(cache_key, response)
+    return response
+
+def delete_planet(planet_id):
+    cache_key = f"planet:{planet_id}"
+    response = api_call(f"planets/{planet_id}", method='DELETE')
+    if response:
+        delete_from_cache(cache_key)
+    return response

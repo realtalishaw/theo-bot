@@ -1,66 +1,54 @@
-import requests
+# api/tasks.py
 
-# Base URL for the JIRA API for tasks
-JIRA_API_TASK_URL = "https://your-jira-instance.atlassian.net/rest/api/3/issue"
+from utils.api_call import api_call
+from utils.redis_cache import get_from_cache, set_in_cache, delete_from_cache
 
-# Roles permitted to create, update, or delete tasks
-TASK_PERMITTED_ROLES = ['PROJECT_ROLE_SPECIFIC_TO_PROJECT', 'SUPER_ADMIN', 'ADMIN', 'PROJECT_LEAD']
+def get_all_tasks():
+    tasks = api_call("tasks", method='GET')
+    if tasks:
+        for task in tasks:
+            task_id = task.get('id')
+            if task_id:
+                set_in_cache(f"task:{task_id}", task)
 
-def check_task_permission(user_role, project_id=None):
-    """
-    Check if the user has permission to C, U, D tasks within the specific project.
-    
-    :param user_role: Role of the user performing the operation.
-    :param project_id: ID of the project for specific role checks.
-    :return: True if permitted, False otherwise.
-    """
-    # Implement role check logic, similar to the project permission check
-
-def create_task(task_data, user_role):
-    """
-    Creates a new task in JIRA.
-    
-    :param task_data: Information about the task to create.
-    :param user_role: Role of the user attempting to create the task.
-    :return: The response from JIRA.
-    """
-    if not check_task_permission(user_role):
-        return {"error": "You do not have permission to create tasks."}
-    
-    # Implement the API call to create a task in JIRA
+def create_task(task_data):
+    response = api_call("tasks", method='POST', data=task_data)
+    if response:
+        task_id = response.get('id')
+        cache_key = f"task:{task_id}"
+        set_in_cache(cache_key, response)
+    return response
 
 def get_task(task_id):
-    """
-    Retrieves a task from JIRA.
-    
-    :param task_id: ID of the task to retrieve.
-    :return: The task details.
-    """
-    # Implement the API call to get a task from JIRA
+    cache_key = f"task:{task_id}"
+    cached_data = get_from_cache(cache_key)
+    if cached_data:
+        return cached_data
 
-def update_task(task_id, task_data, user_role):
-    """
-    Updates a task's details in JIRA.
-    
-    :param task_id: ID of the task to update.
-    :param task_data: New data for updating the task.
-    :param user_role: Role of the user attempting to update the task.
-    :return: The response from JIRA.
-    """
-    if not check_task_permission(user_role):
-        return {"error": "You do not have permission to update this task."}
-    
-    # Implement the API call to update a task in JIRA
+    task_data = api_call(f"tasks/{task_id}", method='GET')
+    if task_data:
+        set_in_cache(cache_key, task_data)
+    return task_data
 
-def delete_task(task_id, user_role):
-    """
-    Deletes a task from JIRA.
-    
-    :param task_id: ID of the task to delete.
-    :param user_role: Role of the user attempting to delete the task.
-    :return: The response from JIRA.
-    """
-    if not check_task_permission(user_role):
-        return {"error": "You do not have permission to delete this task."}
-    
-    # Implement the API call to delete a task in JIRA
+def update_task(task_id, task_data):
+    cache_key = f"task:{task_id}"
+    response = api_call(f"tasks/{task_id}", method='PUT', data=task_data)
+    if response:
+        set_in_cache(cache_key, response)
+    return response
+
+def delete_task(task_id):
+    cache_key = f"task:{task_id}"
+    response = api_call(f"tasks/{task_id}", method='DELETE')
+    if response:
+        delete_from_cache(cache_key)
+    return response
+
+def get_tasks_by_project(project_id):
+    tasks = api_call(f"tasks/byProject/{project_id}", method='GET')
+    if tasks:
+        for task in tasks:
+            task_id = task.get('id')
+            if task_id:
+                set_in_cache(f"task:{task_id}", task)
+    return tasks

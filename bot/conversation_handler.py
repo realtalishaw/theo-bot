@@ -2,7 +2,7 @@ from utils.logger import setup_logger
 import openai
 import time
 
-client = openai.Client(api_key='API_KEY')
+client = openai.Client(api_key='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')
 logger = setup_logger(__name__, 'bot.log')
 
 my_assistant = client.beta.assistants.retrieve("asst_KgDFGq9GlACc8d2HVHDFjT0m")

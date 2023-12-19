@@ -24,4 +24,11 @@ def set_in_cache(key, value, timeout=3600):  # Default timeout of 1 hour
     except redis.RedisError as e:
         print(f"Redis error: {e}")
 
+# Function to delete data from cache
+def delete_from_cache(key):
+    try:
+        redis_client.delete(key)
+    except redis.RedisError as e:
+        print(f"Redis error: {e}")
+
 # Additional functions to handle specific cache operations can be added here

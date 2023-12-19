@@ -1,78 +1,55 @@
-import requests
+# api/projects.py
 
-# Base URL for the JIRA API
-JIRA_API_URL = "https://your-jira-instance.atlassian.net/rest/api/3"
+from utils.api_call import api_call
+from utils.redis_cache import get_from_cache, set_in_cache, delete_from_cache
 
-# Roles permitted to create, update, or delete projects
-PERMITTED_ROLES = ['PROJECT_ROLE_SPECIFIC_TO_PROJECT', 'SUPER_ADMIN', 'ADMIN', 'PROJECT_LEAD']
+def get_all_projects():
+    projects = api_call("projects", method='GET')
+    if projects:
+        for project in projects:
+            project_id = project.get('id')
+            if project_id:
+                set_in_cache(f"project:{project_id}", project)
 
-def check_project_permission(user_role, project_id=None):
-    """
-    Check if the user has permission to C, U, D on the specific project.
-    
-    :param user_role: Role of the user performing the operation.
-    :param project_id: ID of the project for specific role checks.
-    :return: True if permitted, False otherwise.
-    """
-    # If it's a super admin, admin, or project lead, always return True
-    if user_role in PERMITTED_ROLES[:3]:
-        return True
-    
-    # Here you would implement a check to see if the user has the specific role
-    # for the given project_id. This will likely involve a call to your backend
-    # to get the user's roles for that project.
-    
-    return False
-
-def create_project(project_data, user_role):
-    """
-    Creates a new project in JIRA.
-    
-    :param project_data: Information about the project to create.
-    :param user_role: Role of the user attempting to create the project.
-    :return: The response from JIRA.
-    """
-    if not check_project_permission(user_role):
-        return {"error": "You do not have permission to create projects."}
-    
-    # Add code to send a POST request to JIRA API to create a project
-    # ...
+def create_project(project_data):
+    response = api_call("projects", method='POST', data=project_data)
+    if response:
+        project_id = response.get('id')
+        cache_key = f"project:{project_id}"
+        set_in_cache(cache_key, response)
+    return response
 
 def get_project(project_id):
-    """
-    Retrieves a project from JIRA.
-    
-    :param project_id: ID of the project to retrieve.
-    :return: The project details.
-    """
-    # Add code to send a GET request to JIRA API to retrieve a project
-    # ...
+    cache_key = f"project:{project_id}"
+    cached_data = get_from_cache(cache_key)
+    if cached_data:
+        return cached_data
 
-def update_project(project_id, project_data, user_role):
-    """
-    Updates a project's details in JIRA.
-    
-    :param project_id: ID of the project to update.
-    :param project_data: New data for updating the project.
-    :param user_role: Role of the user attempting to update the project.
-    :return: The response from JIRA.
-    """
-    if not check_project_permission(user_role, project_id):
-        return {"error": "You do not have permission to update this project."}
-    
-    # Add code to send a PUT request to JIRA API to update a project
-    # ...
+    project_data = api_call(f"projects/{project_id}", method='GET')
+    if project_data:
+        set_in_cache(cache_key, project_data)
+    return project_data
 
-def delete_project(project_id, user_role):
-    """
-    Deletes a project from JIRA.
-    
-    :param project_id: ID of the project to delete.
-    :param user_role: Role of the user attempting to delete the project.
-    :return: The response from JIRA.
-    """
-    if not check_project_permission(user_role, project_id):
-        return {"error": "You do not have permission to delete this project."}
-    
-    # Add code to send a DELETE request to JIRA API to delete a project
-    # ...
+def update_project(project_id, project_data):
+    cache_key = f"project:{project_id}"
+    response = api_call(f"projects/{project_id}", method='PUT', data=project_data)
+    if response:
+        set_in_cache(cache_key, response)
+    return response
+
+def delete_project(project_id):
+    cache_key = f"project:{project_id}"
+    response = api_call(f"projects/{project_id}", method='DELETE')
+    if response:
+        delete_from_cache(cache_key)
+    return response
+
+def get_projects_by_moon(moon_id):
+    projects = api_call(f"projects/byMoon/{moon_id}", method='GET')
+    if projects:
+        # Optionally, cache these projects too
+        for project in projects:
+            project_id = project.get('id')
+            if project_id:
+                set_in_cache(f"project:{project_id}", project)
+    return projects

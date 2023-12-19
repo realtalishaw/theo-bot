@@ -1,60 +1,46 @@
-import requests
+# api/user.py
 
-# Base URL for the User API
-USER_API_URL = "https://your-api-endpoint.com/users"
-
-def create_user(user_data):
-    """
-    Creates a new user.
-    
-    :param user_data: Dictionary containing the details of the user to create.
-    :return: The response from the API.
-    """
-    # Implement API call to create a new user
-
-def get_all_users():
-    """
-    Retrieves a list of all users.
-    
-    :return: The response from the API.
-    """
-    # Implement API call to retrieve all users
+from utils.api_call import api_call
+from utils.redis_cache import get_from_cache, set_in_cache, delete_from_cache
 
 def get_user(user_id):
-    """
-    Retrieves details of a single user by ID.
-    
-    :param user_id: The unique identifier of the user to retrieve.
-    :return: The response from the API.
-    """
-    # Implement API call to get details of a specific user
+    cache_key = f"user:{user_id}"
+    cached_data = get_from_cache(cache_key)
+    if cached_data:
+        return cached_data
+
+    user_data = api_call(f"users/{user_id}", method='GET')
+    if user_data:
+        set_in_cache(cache_key, user_data)
+    return user_data
+
+def create_user(user_data):
+    print("we're inside of create user")
+    response = api_call("users", method='POST', data=user_data)
+    if response:
+        user_id = response.get('id')
+        cache_key = f"user:{user_id}"
+        set_in_cache(cache_key, response)
+    return response
 
 def update_user(user_id, user_data):
-    """
-    Updates an existing user's details.
-    
-    :param user_id: The unique identifier of the user to update.
-    :param user_data: New data for updating the user's details.
-    :return: The response from the API.
-    """
-    # Implement API call to update a user's details
+    cache_key = f"user:{user_id}"
+    response = api_call(f"users/{user_id}", method='PUT', data=user_data)
+    if response:
+        set_in_cache(cache_key, response)
+    return response
 
 def delete_user(user_id):
-    """
-    Deletes a user.
-    
-    :param user_id: The unique identifier of the user to delete.
-    :return: The response from the API.
-    """
-    # Implement API call to delete a user
+    cache_key = f"user:{user_id}"
+    response = api_call(f"users/{user_id}", method='DELETE')
+    if response:
+        delete_from_cache(cache_key)
+    return response
 
-def verify_user(user_id):
-    """
-    Marks a user as having completed onboarding.
-    
-    :param user_id: The unique identifier of the user to verify.
-    :return: The response from the API.
-    """
-    verify_url = f"{USER_API_URL}/verify/{user_id}"
-    response = requests.put(verify_url, json={"completedOnboarding": True})
-    return response.json()
+def get_all_users():
+    users = api_call("users", method='GET')
+    if users:
+        for user in users:
+            user_id = user.get('id')
+            if user_id:
+                set_in_cache(f"user:{user_id}", user)
